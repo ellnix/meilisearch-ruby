@@ -616,3 +616,5 @@ multi_search_1: |-
     { index_uid: 'movies', q: 'nemo', limit: 5 }
     { index_uid: 'movie_ratings', q: 'us' }
   ])
+facet_search_2: |-
+  client.index('books').update_faceting({ sort_facet_values_by: { genres: 'count' } })
