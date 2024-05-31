@@ -27,9 +27,11 @@ module MeiliSearch
               break
             rescue HTTP::ConnectionError, Errno::EPIPE => e
               last_error = CommunicationError.new e.message
+              Utils.logger.warn("[meilisearch-ruby] Connection error: retrying... #{e.inspect}")
               sleep try_n
             rescue HTTP::ConnectTimeoutError => e
               last_error = TimeoutError.new e.message
+              Utils.logger.warn("[meilisearch-ruby] Timeout error: retrying... #{e.inspect}")
               sleep try_n
             end
           end
