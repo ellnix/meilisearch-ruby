@@ -20,5 +20,3 @@ end
 group :development do
   gem 'rubocop', '~> 1.63.4', require: false
 end
-
-gem "http", "~> 5.2"
