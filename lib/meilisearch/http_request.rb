@@ -17,8 +17,25 @@ module MeiliSearch
         define_method(verb) do |path, config|
           headers = config.delete(:headers)
           timeout = config.delete(:timeout)
-          max_retries = config.delete(:max_retries)
-          httprb_req(verb, path, headers, config, timeout)
+          retries = (config.delete(:max_retries) || 0) + 1
+
+          response = nil
+          last_error = nil
+          retries.times do |try_n|
+            begin
+              response = httprb_req(verb, path, headers, config, timeout)
+              break
+            rescue HTTP::ConnectionError, Errno::EPIPE => e
+              last_error = CommunicationError.new e.message
+              sleep try_n
+            rescue HTTP::ConnectTimeoutError => e
+              last_error = TimeoutError.new e.message
+              sleep try_n
+            end
+          end
+
+          raise last_error unless response
+          response
         end
       end
     end
