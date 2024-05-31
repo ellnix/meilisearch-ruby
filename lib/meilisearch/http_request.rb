@@ -1,11 +1,27 @@
 # frozen_string_literal: true
 
-require 'httparty'
+require 'http'
 require 'meilisearch/error'
 
 module MeiliSearch
   class HTTPRequest
-    include HTTParty
+    class << self
+      def httprb_req(verb, path, headers, config, timeout)
+        HTTP
+          .timeout(timeout)
+          .headers(headers)
+          .public_send(verb, path, config)
+      end
+
+      %i[get post put patch delete].each do |verb|
+        define_method(verb) do |path, config|
+          headers = config.delete(:headers)
+          timeout = config.delete(:timeout)
+          max_retries = config.delete(:max_retries)
+          httprb_req(verb, path, headers, config, timeout)
+        end
+      end
+    end
 
     attr_reader :options, :headers
 
@@ -23,6 +39,12 @@ module MeiliSearch
     end
 
     def http_get(relative_path = '', query_params = {})
+      conf = {
+        query_params: query_params,
+        headers: remove_headers(@headers.dup, 'Content-Type'),
+        options: @options
+      }
+
       send_request(
         proc { |path, config| self.class.get(path, config) },
         relative_path,
@@ -107,9 +129,9 @@ module MeiliSearch
 
       begin
         response = http_method.call(@base_url + relative_path, config)
-      rescue Errno::ECONNREFUSED, Errno::EPIPE => e
+      rescue HTTP::ConnectionError, Errno::EPIPE => e
         raise CommunicationError, e.message
-      rescue Net::ReadTimeout, Net::OpenTimeout => e
+      rescue HTTP::ConnectTimeoutError => e
         raise TimeoutError, e.message
       end
 
@@ -120,17 +142,17 @@ module MeiliSearch
       body = body.to_json if options[:convert_body?] == true
       {
         headers: headers,
-        query: query_params,
-        body: body,
+        params: query_params,
         timeout: options[:timeout],
-        max_retries: options[:max_retries]
+        max_retries: options[:max_retries],
+        body: body,
       }.compact
     end
 
     def validate(response)
-      raise ApiError.new(response.code, response.message, response.body) unless response.success?
+      raise ApiError.new(response.status.code, response.status.reason, response.body.to_s) unless response.status.success?
 
-      response.parsed_response
+      JSON.parse response.body unless response.body.empty?
     end
   end
 end

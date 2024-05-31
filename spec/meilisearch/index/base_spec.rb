@@ -116,13 +116,12 @@ RSpec.describe MeiliSearch::Index do
       {
         headers: expected_headers,
         body: 'null',
-        query: {},
+        params: {},
         max_retries: 1,
         timeout: 2
       }
-    ).and_return(double(success?: true,
-                        parsed_response: { 'createdAt' => '2021-10-16T14:57:35Z',
-                                           'updatedAt' => '2021-10-16T14:57:35Z' }))
+    ).and_return(double(status: double(success?: true),
+      body: JSON.dump({ 'createdAt' => '2021-10-16T14:57:35Z', 'updatedAt' => '2021-10-16T14:57:35Z' })))
     index.fetch_info
   end
 
@@ -144,13 +143,13 @@ RSpec.describe MeiliSearch::Index do
       {
         headers: expected_headers,
         body: 'null',
-        query: {},
+        params: {},
         max_retries: 1,
         timeout: 2
       }
-    ).and_return(double(success?: true,
-                        parsed_response: { 'createdAt' => '2021-10-16T14:57:35Z',
-                                           'updatedAt' => '2021-10-16T14:57:35Z' }))
+    ).and_return(double(status: double(success?: true),
+      body: JSON.dump({ 'createdAt' => '2021-10-16T14:57:35Z', 'updatedAt' => '2021-10-16T14:57:35Z' })))
+
     index.fetch_info
   end
 
