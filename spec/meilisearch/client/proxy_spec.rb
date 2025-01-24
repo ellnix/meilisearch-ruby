@@ -8,8 +8,8 @@ describe 'Meilisearch::Client - proxy search' do
   let(:sample_remote) do
     {
       uid: 'ms-2',
-      url: 'localhost:7701',
-      search_api_key: 'masterKey'
+      url: PROXY_URL,
+      search_api_key: MASTER_KEY
     }
   end
 
@@ -90,6 +90,40 @@ describe 'Meilisearch::Client - proxy search' do
 
       client.delete_remote('ms-2')
       expect(client.remotes).to eq(default_remotes)
+    end
+  end
+
+  describe 'searching multiple remotes' do
+    # this of course means we need to support federated search,
+    # which has not been merged yet.
+    it 'federated search searches multiple remotes' do
+      three_body_problem = { id: 1, title: 'The Three Body Problem' }
+      the_dark_forest = { id: 2, title: 'The Dark Forest' }
+      proxy_client.index('books').add_documents([three_body_problem, the_dark_forest])
+
+      sherwood_forest = { id: 50, name: 'Sherwood Forest' }
+      forbidden_forest = { id: 200, name: 'Forbidden Forest' }
+      client.index('parks').add_documents([sherwood_forest, forbidden_forest])
+
+      client.add_remote(sample_remote)
+
+      response = client.multi_search(
+        federation: {},
+        queries: [
+          {
+            q: 'Forest',
+            index_uid: 'parks'
+          },
+          {
+            q: 'Body',
+            index_uid: 'books',
+            remote: 'ms-2'
+          }
+        ]
+      )
+
+      expect(response['hits']).to include(three_body_problem, sherwood_forest, forbidden_forest)
+      expect(response['hits']).not_to include(the_dark_forest)
     end
   end
 end
